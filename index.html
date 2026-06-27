@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QRAttend BUK — Lecturer Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+  :root{--green:#0a5c36;--green-mid:#0d7a48;--green-light:#e6f4ed;--gold:#c9a84c;--gold-light:#fdf6e3;--bg:#f5f7f5;--surface:#fff;--text:#1a1a1a;--muted:#6b7280;--border:#dde3dd;--red:#dc2626;--shadow:0 2px 12px rgba(10,92,54,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .topbar{background:var(--green);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;position:sticky;top:0;z-index:100}
+  .topbar-brand{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700}
+  .topbar-brand span{color:var(--gold)}
+  .topbar-user{font-size:13px;display:flex;align-items:center;gap:10px}
+  #logoutBtn{background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+  .screen{display:none;max-width:960px;margin:0 auto;padding:32px 16px}
+  .screen.active{display:block}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;box-shadow:var(--shadow);margin-bottom:20px}
+  .card-title{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--green-light)}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .field input,.field select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:'Inter',sans-serif;background:#fff;color:var(--text);transition:border .2s}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--green)}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:'Inter',sans-serif}
+  .btn-primary{background:var(--green);color:#fff}
+  .btn-primary:hover{background:var(--green-mid)}
+  .btn-gold{background:var(--gold);color:#fff}
+  .btn-outline{background:transparent;color:var(--green);border:1.5px solid var(--green)}
+  .btn-outline:hover{background:var(--green-light)}
+  .btn-sm{padding:7px 14px;font-size:13px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .login-logo{text-align:center;margin-bottom:28px}
+  .login-logo h1{font-family:'Space Grotesk',sans-serif;font-size:28px;color:var(--green)}
+  .login-logo h1 span{color:var(--gold)}
+  .login-logo p{color:var(--muted);font-size:14px;margin-top:4px}
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;box-shadow:var(--shadow)}
+  .stat-num{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;color:var(--green)}
+  .stat-label{font-size:13px;color:var(--muted);margin-top:4px}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{background:var(--green-light);color:var(--green);font-weight:600;padding:10px 14px;text-align:left;font-size:13px;text-transform:uppercase;letter-spacing:.4px}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:hover td{background:#fafcfa}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+  .badge-green{background:var(--green-light);color:var(--green)}
+  .badge-red{background:#fef2f2;color:var(--red)}
+  .qr-box{text-align:center;padding:24px;background:var(--green-light);border-radius:10px;margin-top:20px}
+  #qrcode{display:inline-block;background:#fff;padding:16px;border-radius:8px;box-shadow:var(--shadow)}
+  .qr-meta{margin-top:16px}
+  .qr-meta p{font-size:13px;color:var(--muted)}
+  .qr-meta strong{color:var(--green);font-size:15px;display:block;margin-bottom:4px}
+  .timer-bar-wrap{margin-top:12px;background:#c8e6d8;border-radius:20px;height:8px;overflow:hidden}
+  .timer-bar{height:100%;background:var(--green);transition:width 1s linear;border-radius:20px}
+  #timerText{font-size:13px;color:var(--muted);margin-top:6px}
+  .nav-row{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  .alert{padding:12px 16px;border-radius:8px;font-size:14px;margin-bottom:16px}
+  .alert-success{background:var(--green-light);color:var(--green);border:1px solid #a0d4b8}
+  .alert-error{background:#fef2f2;color:var(--red);border:1px solid #fca5a5}
+  .alert-info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+  @media(max-width:600px){.stats-row{grid-template-columns:1fr 1fr}.field-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar" style="display:none">
+  <div class="topbar-brand">QRAttend <span>· BUK</span></div>
+  <div class="topbar-user">
+    <span id="topbarName"></span>
+    <button id="logoutBtn" onclick="logout()">Sign out</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="screen active" id="loginScreen" style="max-width:420px;margin:60px auto;padding:32px 16px">
+  <div class="login-logo">
+    <h1>QRAttend <span>· BUK</span></h1>
+    <p>Lecturer Portal — Faculty of Computing</p>
+  </div>
+  <div class="card">
+    <div id="loginAlert"></div>
+    <div class="field"><label>Staff ID</label><input type="text" id="loginStaff" placeholder="BUK/STAFF/0001"/></div>
+    <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••"/></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()" id="loginBtn">Sign In</button>
+    <p style="margin-top:14px;font-size:13px;color:#6b7280;text-align:center">
+      No account? <a href="#" onclick="showReg()" style="color:var(--green);font-weight:600">Register</a>
+    </p>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div class="screen" id="regScreen" style="max-width:480px;margin:60px auto;padding:32px 16px">
+  <div class="login-logo">
+    <h1>QRAttend <span>· BUK</span></h1>
+    <p>Register as Lecturer</p>
+  </div>
+  <div class="card">
+    <div id="regAlert"></div>
+    <div class="field-row">
+      <div class="field"><label>First Name</label><input type="text" id="regFirst" placeholder="Musa"/></div>
+      <div class="field"><label>Last Name</label><input type="text" id="regLast" placeholder="Ibrahim"/></div>
+    </div>
+    <div class="field"><label>Staff ID</label><input type="text" id="regStaff" placeholder="BUK/STAFF/0001"/></div>
+    <div class="field">
+      <label>Faculty</label>
+      <select id="regFaculty" onchange="populateDeptReg()">
+        <option value="">— Select Faculty —</option>
+        <option value="Computing">Faculty of Computing</option>
+        <option value="Science">Faculty of Science</option>
+        <option value="Engineering">Faculty of Engineering</option>
+        <option value="Education">Faculty of Education</option>
+        <option value="Arts">Faculty of Arts & Islamic Studies</option>
+        <option value="Management">Faculty of Management Sciences</option>
+        <option value="Medicine">Faculty of Medicine</option>
+        <option value="Law">Faculty of Law</option>
+      </select>
+    </div>
+    <div class="field"><label>Department</label><select id="regDept"><option value="">— Select Faculty first —</option></select></div>
+    <div class="field"><label>Password</label><input type="password" id="regPass" placeholder="Min. 6 characters"/></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doRegister()" id="regBtn">Create Account</button>
+    <p style="margin-top:14px;font-size:13px;color:#6b7280;text-align:center">
+      Already registered? <a href="#" onclick="showLogin()" style="color:var(--green);font-weight:600">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="screen" id="dashScreen">
+  <div class="nav-row">
+    <div>
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--green)">Dashboard</h2>
+      <p style="font-size:14px;color:var(--muted);margin-top:2px">Your attendance sessions overview</p>
+    </div>
+    <button class="btn btn-primary" onclick="showScreen('newSessionScreen')">+ New Session</button>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="statSessions">—</div><div class="stat-label">Total Sessions</div></div>
+    <div class="stat-card"><div class="stat-num" id="statStudents">—</div><div class="stat-label">Total Check-ins</div></div>
+    <div class="stat-card"><div class="stat-num" id="statCourses">—</div><div class="stat-label">Courses Taught</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">All Sessions</div>
+    <div id="dashAlert"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Course</th><th>Date</th><th>Session</th><th style="text-align:center">Check-ins</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="sessionsTable"><tr><td colspan="7"><div class="empty-state">Loading sessions...</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- NEW SESSION -->
+<div class="screen" id="newSessionScreen">
+  <div class="nav-row">
+    <div>
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--green)">Generate QR Code</h2>
+      <p style="font-size:14px;color:var(--muted);margin-top:2px">Create an attendance session</p>
+    </div>
+    <button class="btn btn-outline" onclick="showScreen('dashScreen');loadDashboard()">← Back</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Session Details</div>
+    <div id="newSessionAlert"></div>
+    <div class="field-row">
+      <div class="field"><label>Course Code</label><input type="text" id="sessCode" placeholder="e.g. CSC 101" style="text-transform:uppercase"/></div>
+      <div class="field"><label>Course Title</label><input type="text" id="sessTitle" placeholder="Intro to Computing"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Faculty</label>
+        <select id="sessFaculty" onchange="populateDeptSess()">
+          <option value="">— Select —</option>
+          <option value="Computing">Faculty of Computing</option>
+          <option value="Science">Faculty of Science</option>
+          <option value="Engineering">Faculty of Engineering</option>
+          <option value="Education">Faculty of Education</option>
+          <option value="Arts">Faculty of Arts & Islamic Studies</option>
+          <option value="Management">Faculty of Management Sciences</option>
+          <option value="Medicine">Faculty of Medicine</option>
+          <option value="Law">Faculty of Law</option>
+        </select>
+      </div>
+      <div class="field"><label>Department</label><select id="sessDept"><option value="">— Select Faculty first —</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Session Label</label><input type="text" id="sessLabel" placeholder="e.g. Morning Lecture, Week 3"/></div>
+      <div class="field">
+        <label>QR Expiry (minutes)</label>
+        <select id="sessExpiry">
+          <option value="5">5 minutes</option>
+          <option value="10" selected>10 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="20">20 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">60 minutes</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button class="btn btn-primary" onclick="generateQR()" id="genBtn">Generate QR Code</button>
+      <button class="btn btn-outline" onclick="clearForm()">Clear</button>
+    </div>
+  </div>
+  <div id="qrSection" style="display:none;margin-top:20px">
+    <div class="card">
+      <div class="card-title">Active QR Code</div>
+      <div class="qr-box">
+        <div id="qrcode"></div>
+        <div class="qr-meta">
+          <strong id="qrCourse">—</strong>
+          <p id="qrSession">—</p>
+          <p id="qrDate">—</p>
+        </div>
+        <div class="timer-bar-wrap" style="max-width:300px;margin:12px auto 0">
+          <div class="timer-bar" id="timerBar" style="width:100%"></div>
+        </div>
+        <div id="timerText">—</div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-gold" onclick="downloadQR()">⬇ Download QR</button>
+        <button class="btn btn-outline" onclick="refreshQR()">↻ Refresh QR</button>
+        <button class="btn btn-primary" onclick="viewLiveCheckins()">👁 Live Check-ins</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE CHECKINS -->
+<div class="screen" id="liveScreen">
+  <div class="nav-row">
+    <div>
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:22px;color:var(--green)" id="liveTitle">Live Check-ins</h2>
+      <p style="font-size:14px;color:var(--muted);margin-top:2px" id="liveSubtitle">—</p>
+    </div>
+    <button class="btn btn-outline" onclick="showScreen('newSessionScreen')">← Back to QR</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div><span class="badge badge-green">● Live</span><span style="margin-left:10px;font-size:14px;color:var(--muted)">Auto-refreshes every 10s</span></div>
+      <span id="liveCount" style="font-size:22px;font-weight:700;color:var(--green);font-family:'Space Grotesk',sans-serif">0 students</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Full Name</th><th>Reg. Number</th><th>Check-in Time</th></tr></thead>
+        <tbody id="liveTable"><tr><td colspan="4"><div class="empty-state">Waiting for students to check in…</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lwicsgljxwmwlhuiujcu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3aWNzZ2xqeHdtd2xodWl1amN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NjUxOTUsImV4cCI6MjA5ODA0MTE5NX0.A_oG6YN8gL8q-B4GlyLvtooNfvaEm4L_jj2cp-0Pm5Y';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DEPTS = {
+  Computing:['Computer Science','Software Engineering','Information Technology','Cyber Security','Data Science'],
+  Science:['Mathematics','Physics','Chemistry','Biology','Statistics','Biochemistry'],
+  Engineering:['Electrical Engineering','Civil Engineering','Mechanical Engineering','Chemical Engineering'],
+  Education:['Education Mathematics','Education Biology','Education Chemistry','Education Physics'],
+  Arts:['Arabic & Islamic Studies','History','English','Linguistics','French'],
+  Management:['Accounting','Business Administration','Economics','Finance','Marketing'],
+  Medicine:['Medicine & Surgery','Nursing','Pharmacy','Medical Laboratory Science'],
+  Law:['Law (LLB)'],
+};
+
+function populateDept(selectId, facultyVal) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">— Select Department —</option>';
+  if (!facultyVal || !DEPTS[facultyVal]) return;
+  DEPTS[facultyVal].forEach(d => { const o=document.createElement('option');o.value=d;o.textContent=d;sel.appendChild(o); });
+}
+function populateDeptReg() { populateDept('regDept', document.getElementById('regFaculty').value); }
+function populateDeptSess() { populateDept('sessDept', document.getElementById('sessFaculty').value); }
+
+let currentUser = null, activeSessionId = null, liveInterval = null;
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function showLogin() { showScreen('loginScreen'); }
+function showReg() { showScreen('regScreen'); }
+
+// Auto-generate email from staff ID
+function staffToEmail(staffId) {
+  return staffId.toLowerCase().replace(/[^a-z0-9]/g,'') + '@lecturer.qrattend.buk';
+}
+
+async function doLogin() {
+  const staff = document.getElementById('loginStaff').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!staff || !pass) return setAlert('loginAlert','error','Please fill in all fields.');
+  setAlert('loginAlert','info','Signing in…');
+  document.getElementById('loginBtn').disabled = true;
+  const email = staffToEmail(staff);
+  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+  document.getElementById('loginBtn').disabled = false;
+  if (error) return setAlert('loginAlert','error','Wrong Staff ID or password.');
+  await afterLogin(data.user);
+}
+
+async function doRegister() {
+  const first = document.getElementById('regFirst').value.trim();
+  const last = document.getElementById('regLast').value.trim();
+  const staff = document.getElementById('regStaff').value.trim();
+  const faculty = document.getElementById('regFaculty').value;
+  const dept = document.getElementById('regDept').value;
+  const pass = document.getElementById('regPass').value;
+  if (!first||!last||!staff||!faculty||!dept||!pass) return setAlert('regAlert','error','Please complete all fields.');
+  if (pass.length < 6) return setAlert('regAlert','error','Password must be at least 6 characters.');
+  setAlert('regAlert','info','Creating account…');
+  document.getElementById('regBtn').disabled = true;
+  const email = staffToEmail(staff);
+  const { data, error } = await db.auth.signUp({
+    email, password: pass,
+    options: { data: { full_name:`${first} ${last}`, staff_id:staff, faculty, department:dept, role:'lecturer' } }
+  });
+  document.getElementById('regBtn').disabled = false;
+  if (error) return setAlert('regAlert','error', error.message);
+  setAlert('regAlert','success','Account created! You can now sign in.');
+  setTimeout(() => { showLogin(); }, 2000);
+}
+
+async function afterLogin(user) {
+  currentUser = user;
+  const meta = user.user_metadata || {};
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('topbarName').textContent = meta.full_name || meta.staff_id || 'Lecturer';
+  showScreen('dashScreen');
+  await loadDashboard();
+}
+
+async function logout() {
+  await db.auth.signOut();
+  currentUser = null;
+  document.getElementById('topbar').style.display = 'none';
+  clearInterval(liveInterval);
+  showScreen('loginScreen');
+}
+
+async function loadDashboard() {
+  const { data: sessions, error } = await db
+    .from('sessions').select('id,course_code,course_title,session_label,date,expires_at')
+    .eq('lecturer_id', currentUser.id).order('created_at', { ascending: false });
+  if (error) return setAlert('dashAlert','error', error.message);
+  const rows = [];
+  let totalCheckins = 0;
+  const courses = new Set();
+  for (const s of (sessions || [])) {
+    const { count } = await db.from('attendance').select('id',{count:'exact',head:true}).eq('session_id',s.id);
+    rows.push({ ...s, checkins: count || 0 });
+    totalCheckins += (count || 0);
+    courses.add(s.course_code);
+  }
+  document.getElementById('statSessions').textContent = rows.length;
+  document.getElementById('statStudents').textContent = totalCheckins;
+  document.getElementById('statCourses').textContent = courses.size;
+  const now = new Date();
+  const tbody = document.getElementById('sessionsTable');
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="7"><div class="empty-state">No sessions yet. Click <b>New Session</b> to start.</div></td></tr>'; return; }
+  tbody.innerHTML = rows.map((s,i) => {
+    const expired = new Date(s.expires_at) < now;
+    const badge = expired ? '<span class="badge badge-red">Expired</span>' : '<span class="badge badge-green">Active</span>';
+    return `<tr><td>${i+1}</td><td><b>${s.course_code}</b><br><span style="font-size:12px;color:var(--muted)">${s.course_title||''}</span></td><td>${s.date||'—'}</td><td>${s.session_label||'—'}</td><td style="text-align:center"><b style="font-size:16px;color:var(--green)">${s.checkins}</b></td><td>${badge}</td><td><button class="btn btn-outline btn-sm" onclick="openLiveById('${s.id}','${s.course_code}','${s.session_label||''}')">View</button></td></tr>`;
+  }).join('');
+}
+
+let expiryMs=0, expiryEnd=null, timerTick=null;
+
+async function generateQR() {
+  const code = document.getElementById('sessCode').value.trim().toUpperCase();
+  const title = document.getElementById('sessTitle').value.trim();
+  const faculty = document.getElementById('sessFaculty').value;
+  const dept = document.getElementById('sessDept').value;
+  const label = document.getElementById('sessLabel').value.trim();
+  const expMins = parseInt(document.getElementById('sessExpiry').value);
+  if (!code||!title||!faculty||!dept||!label) return setAlert('newSessionAlert','error','Please fill in all session details.');
+  setAlert('newSessionAlert','info','Creating session…');
+  document.getElementById('genBtn').disabled = true;
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + expMins*60000);
+  const dateStr = now.toISOString().split('T')[0];
+  const { data: sess, error } = await db.from('sessions').insert({
+    lecturer_id: currentUser.id,
+    lecturer_name: currentUser.user_metadata?.full_name || '',
+    course_code: code, course_title: title, faculty, department: dept,
+    session_label: label, date: dateStr, expires_at: expiresAt.toISOString(), created_at: now.toISOString()
+  }).select().single();
+  document.getElementById('genBtn').disabled = false;
+  if (error) return setAlert('newSessionAlert','error', error.message);
+  setAlert('newSessionAlert','success','Session created! Show QR to students.');
+  activeSessionId = sess.id;
+  const qrUrl = `${location.origin}${location.pathname.replace('lecturer_portal.html','student_portal.html')}?session=${sess.id}`;
+  document.getElementById('qrcode').innerHTML = '';
+  new QRCode(document.getElementById('qrcode'), { text: qrUrl, width: 220, height: 220, colorDark:'#0a5c36', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.H });
+  document.getElementById('qrCourse').textContent = `${code} — ${title}`;
+  document.getElementById('qrSession').textContent = label;
+  document.getElementById('qrDate').textContent = `Date: ${dateStr} | Expires in ${expMins} min`;
+  document.getElementById('qrSection').style.display = 'block';
+  expiryMs = expMins*60000; expiryEnd = expiresAt.getTime();
+  clearInterval(timerTick); timerTick = setInterval(tickTimer, 1000); tickTimer();
+}
+
+function tickTimer() {
+  const rem = expiryEnd - Date.now();
+  if (rem <= 0) { clearInterval(timerTick); document.getElementById('timerBar').style.width='0%'; document.getElementById('timerText').textContent='QR expired.'; return; }
+  document.getElementById('timerBar').style.width = (rem/expiryMs*100)+'%';
+  const m=Math.floor(rem/60000), s=Math.floor((rem%60000)/1000);
+  document.getElementById('timerText').textContent = `Expires in ${m}m ${s.toString().padStart(2,'0')}s`;
+}
+
+function refreshQR() { generateQR(); }
+function downloadQR() {
+  const canvas = document.querySelector('#qrcode canvas');
+  if (!canvas) return alert('Generate a QR first.');
+  const a=document.createElement('a'); a.download=`QR_${document.getElementById('sessCode').value||'session'}.png`; a.href=canvas.toDataURL(); a.click();
+}
+function clearForm() {
+  ['sessCode','sessTitle','sessLabel'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sessFaculty').value=''; document.getElementById('sessDept').innerHTML='<option>— Select Faculty first —</option>';
+  document.getElementById('sessExpiry').value='10'; document.getElementById('qrSection').style.display='none';
+  document.getElementById('newSessionAlert').innerHTML=''; clearInterval(timerTick);
+}
+
+async function viewLiveCheckins() {
+  if (!activeSessionId) return;
+  openLiveById(activeSessionId, document.getElementById('sessCode').value.trim().toUpperCase(), document.getElementById('sessLabel').value.trim());
+}
+async function openLiveById(sessionId, code, label) {
+  activeSessionId = sessionId;
+  document.getElementById('liveTitle').textContent = `Live: ${code}`;
+  document.getElementById('liveSubtitle').textContent = label || '—';
+  showScreen('liveScreen'); clearInterval(liveInterval);
+  await fetchLive(); liveInterval = setInterval(fetchLive, 10000);
+}
+async function fetchLive() {
+  const { data, error } = await db.from('attendance').select('id,full_name,reg_number,check_in_time').eq('session_id',activeSessionId).order('check_in_time',{ascending:true});
+  if (error) return;
+  const rows = data || [];
+  document.getElementById('liveCount').textContent = `${rows.length} student${rows.length!==1?'s':''}`;
+  if (!rows.length) { document.getElementById('liveTable').innerHTML='<tr><td colspan="4"><div class="empty-state">Waiting for students to check in…</div></td></tr>'; return; }
+  document.getElementById('liveTable').innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.full_name||'—'}</td><td><code>${r.reg_number||'—'}</code></td><td>${r.check_in_time?new Date(r.check_in_time).toLocaleTimeString():'—'}</td></tr>`).join('');
+}
+
+function setAlert(id, type, msg) {
+  const el=document.getElementById(id); if(!el) return;
+  const cls=type==='error'?'alert-error':type==='success'?'alert-success':'alert-info';
+  el.innerHTML=`<div class="alert ${cls}">${msg}</div>`;
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) await afterLogin(session.user);
+});
+</script>
+</body>
+</html>
